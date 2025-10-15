@@ -1,6 +1,6 @@
 import random
 import heapq
-
+#from functions import *
 def main():
     # Randomly generate 100 reachable states for 8_puzzle
     goalState = [0, 1, 2, 3, 4, 5, 6, 7, 8]
@@ -54,6 +54,50 @@ def main():
                 distance += abs(x1 - x2) + abs(y1 - y2) # add the tile's distance to goal
         return distance
 
+    def h3(state): # h3: Manhattan distance + 2 * number of linear conflicts (adds extra penalty if two tiles are blocking each other in the same row/column.)
+        manhattan = h2(state)
+        linear_conflicts = 0
+
+        # Row conflicts
+        for row in range(3):
+            # tiles in this row (value, current_col, goal_row, goal_col)
+            row_tiles = []
+            for col in range(3):
+                val = state[row*3 + col]
+                if val == 0:
+                    continue # ignore blank tile
+                gr, gc = divmod(goalState.index(val), 3)
+                if gr == row:  # only consider tiles whose goal is in this row
+                    row_tiles.append((val, col, gr, gc))
+            # compare tiles in this row
+            for i in range(len(row_tiles)):
+                for j in range(i+1, len(row_tiles)):
+                    # If tile i and j are reversed (goal_col_i > goal_col_j),
+                    # it means they are in linear conflict.
+                    _, col_i, _, goal_col_i = row_tiles[i]
+                    _, col_j, _, goal_col_j = row_tiles[j]
+                    if goal_col_i > goal_col_j:
+                        linear_conflicts += 1
+
+        # Column conflicts, same logic as row conflicts
+        for col in range(3):
+            col_tiles = []
+            for row in range(3):
+                val = state[row*3 + col]
+                if val == 0:
+                    continue
+                gr, gc = divmod(goalState.index(val), 3)
+                if gc == col:
+                    col_tiles.append((val, row, gr, gc))
+            for i in range(len(col_tiles)):
+                for j in range(i+1, len(col_tiles)):
+                    _, row_i, goal_row_i, _ = col_tiles[i]
+                    _, row_j, goal_row_j, _ = col_tiles[j]
+                    if goal_row_i > goal_row_j:
+                        linear_conflicts += 1
+
+        return manhattan + 2 * linear_conflicts
+
     def get_neighbours(state): # get the next states by moving the blank tile
         neighbours = []
         zero_idx = state.index(0) # find blank tile
@@ -103,17 +147,18 @@ def main():
 
         steps_h1, nodes_h1 = a_star_algorithm(state_list, h1)
         steps_h2, nodes_h2 = a_star_algorithm(state_list, h2)
+        steps_h3, nodes_h3 = a_star_algorithm(state_list, h3)
 
-        results.append([count, steps_h1, nodes_h1, steps_h2, nodes_h2])
+        results.append([count, steps_h1, nodes_h1, steps_h2, nodes_h2, steps_h3, nodes_h3])
         count += 1
 
-    print("{:<8} {:<12} {:<18} {:<12} {:<18}".format(
-        "Puzzle", "Steps(h1)", "NodesExpanded(h1)", "Steps(h2)", "NodesExpanded(h2)"
+    print("{:<8} {:<12} {:<18} {:<12} {:<18} {:<12} {:<18}".format(
+        "Puzzle", "Steps(h1)", "NodesExpanded(h1)", "Steps(h2)", "NodesExpanded(h2)", "Steps(h3)", "NodesExpanded(h3)"
     ))
     print("")
 
     for row in results:
-        print("{:<8} {:<12} {:<18} {:<12} {:<18}".format(*row))
+        print("{:<8} {:<12} {:<18} {:<12} {:<18} {:<12} {:<18}".format(*row))
 
 if __name__ == "__main__":
     main()
